@@ -3,18 +3,22 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 
+	"github.com/Xe/xj9/common"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/matrix-org/gomatrix"
+	"github.com/sbinet/plugs"
+	"github.com/tchap/go-exchange/exchange"
 )
 
 var (
 	matrixHomeserver = mustEnv("MATRIX_HOMESERVER")
 	matrixUsername   = mustEnv("MATRIX_USERNAME")
 	matrixPassword   = mustEnv("MATRIX_PASSWORD")
+	adminName        = mustEnv("ADMIN")
+	autoloadPlugins  = mustEnv("AUTOLOAD")
 )
 
 func mustEnv(key string) string {
@@ -28,6 +32,15 @@ func mustEnv(key string) string {
 }
 
 func main() {
+	for _, name := range strings.Split(autoloadPlugins, ",") {
+		_, err := plugs.Open("github.com/Xe/xj9/plugins/" + name)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf("loaded %s", name)
+	}
+
 	cli, _ := gomatrix.NewClient(matrixHomeserver, "", "")
 	resp, err := cli.Login(&gomatrix.ReqLogin{
 		Type:     "m.login.password",
@@ -52,28 +65,13 @@ func main() {
 			return
 		}
 
-		if body[0] == '.' {
-			// handle commands
-			parts := strings.Fields(body)
-			verb := strings.ToLower(parts[0][1:])
-
-			switch verb {
-			case "httptest":
-				loc := parts[1]
-
-				resp, err := http.Get(loc)
-				if err != nil {
-					cli.SendText(ev.RoomID, err.Error())
-					return
-				}
-
-				cli.SendText(ev.RoomID, "GET "+loc+": "+resp.Status)
-			}
-		}
-
-		switch body {
-		case "h":
-			cli.SendText(ev.RoomID, "h")
+		err := common.Exc.Publish(exchange.Topic("incoming"), common.Event{
+			Client: cli,
+			Event:  ev,
+		})
+		if err != nil {
+			log.Printf("failed to publish message: %#v: %v", ev, err)
+			return
 		}
 	})
 
