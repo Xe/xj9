@@ -40,7 +40,7 @@ func (h httpTestCmd) Permissions(c *gomatrix.Client, ev *gomatrix.Event, parv []
 }
 
 func init() {
-	bot.DefaultCommandSet.Add(&httpTestCmd{})
+	go bot.DefaultCommandSet.Add(&httpTestCmd{})
 }
 
 func Okay() bool {

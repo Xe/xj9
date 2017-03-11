@@ -44,7 +44,10 @@ func loadPlugin(name string) error {
 
 func main() {
 	for _, name := range strings.Split(autoloadPlugins, ",") {
-		loadPlugin(name)
+		err := loadPlugin(name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	cli, _ := gomatrix.NewClient(matrixHomeserver, "", "")
