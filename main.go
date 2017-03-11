@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"plugin"
 	"strings"
 
 	"github.com/Xe/xj9/common"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/matrix-org/gomatrix"
-	"github.com/sbinet/plugs"
 	"github.com/tchap/go-exchange/exchange"
 )
 
@@ -31,14 +31,20 @@ func mustEnv(key string) string {
 	return result
 }
 
+func loadPlugin(name string) error {
+	_, err := plugin.Open("./plugins/" + name + ".so")
+	if err != nil {
+		return err
+	}
+
+	log.Printf("loaded %s", name)
+
+	return nil
+}
+
 func main() {
 	for _, name := range strings.Split(autoloadPlugins, ",") {
-		_, err := plugs.Open("github.com/Xe/xj9/plugins/" + name)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Printf("loaded %s", name)
+		loadPlugin(name)
 	}
 
 	cli, _ := gomatrix.NewClient(matrixHomeserver, "", "")
